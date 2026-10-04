@@ -29,7 +29,9 @@
   .hero h1{font-family:var(--display);font-size:32px;line-height:1.04;margin:0 0 8px;text-shadow:0 2px 18px #000}
   .hero h1 em{color:var(--gold);font-style:normal}
   .hero p{color:#e7ecf3;font-size:14.5px;margin:0 0 12px}
-  .sound{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer}
+  .sound{position:absolute;top:12px;right:12px;z-index:3;white-space:nowrap;background:rgba(0,0,0,.62);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:999px;padding:9px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+  .sound.pulse{background:var(--gold);color:#111;border-color:transparent;animation:pulso 1.4s ease-in-out infinite}
+  @keyframes pulso{0%,100%{transform:scale(1);box-shadow:0 0 0 0 rgba(255,190,60,.6)}50%{transform:scale(1.06);box-shadow:0 0 0 10px rgba(255,190,60,0)}}
   .badges{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:14px 0 4px}
   .badge{background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:12.5px;font-weight:600}.badge b{color:var(--gold)}
   .preco{background:radial-gradient(120% 120% at 50% 0,rgba(255,194,74,.14),transparent 60%),var(--card);border:1px solid var(--line);border-radius:22px;padding:22px 18px;text-align:center;margin:14px 0}
@@ -95,8 +97,8 @@
   <header><img src="assets/logo.png" alt=""><div class="marca">Cine<span>Luz</span> Pro</div></header>
 
   <div class="hero reveal on">
-    <video id="v" src="assets/hero.mp4" poster="assets/poster.jpg" autoplay muted loop playsinline></video>
-    <button class="sound" id="snd" type="button">🔇 ativar som</button>
+    <video id="v" src="assets/video.mp4" poster="assets/poster.jpg" autoplay muted loop playsinline preload="auto"></video>
+    <button class="sound" id="snd" type="button">🔇 Toque para ouvir</button>
     <div class="grad"></div>
     <div class="cap">
       <h1>Sua parede vira um <em>cinema</em> de 120"</h1>
@@ -225,8 +227,37 @@ fbq('track','ViewContent',{content_name:'Projetor CineLuz Pro',content_ids:['371
   document.querySelectorAll('.buy').forEach(function(a){a.href=PRODUTO;a.addEventListener('click',function(e){e.preventDefault();if(indo)return;indo=true;try{fbq('track','AddToCart',{value:249.90,currency:'BRL',content_ids:['371838597'],content_type:'product'})}catch(err){}setTimeout(function(){f.submit()},200);setTimeout(function(){indo=false},4000)})});
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}})},{threshold:.1});
   document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
-  var v=document.getElementById('v'),snd=document.getElementById('snd');
-  snd.addEventListener('click',function(){ if(v.muted){ v.src='assets/video.mp4'; v.muted=false; v.currentTime=0; v.play(); snd.textContent='🔊 som ligado'; } else { v.muted=true; snd.textContent='🔇 ativar som'; } });
+  // SOM: tenta abrir ja com som. Navegador que bloqueia (regra de autoplay) comeca mudo
+  // e liga o som no primeiro toque na pagina. Botao no canto liga/desliga.
+  var v=document.getElementById('v'),snd=document.getElementById('snd'),hero=v.parentNode;
+  var mutouNaMao=false,heroVisivel=true;
+  function rotulo(){
+    if(!v.muted){snd.textContent='🔊 Silenciar';snd.classList.remove('pulse')}
+    else if(mutouNaMao){snd.textContent='🔇 Ligar o som';snd.classList.remove('pulse')}
+    else{snd.textContent='🔇 Toque para ouvir';snd.classList.add('pulse')}
+  }
+  function mudo(){v.muted=true;if(heroVisivel&&!document.hidden){var p=v.play();if(p&&p.catch)p.catch(function(){})}rotulo()}
+  function comSom(doInicio){
+    v.muted=false;
+    var p=v.play();
+    if(p&&p.then){p.then(function(){if(doInicio)v.currentTime=0;rotulo()}).catch(function(){mudo()})}
+    else{rotulo()}
+  }
+  snd.addEventListener('click',function(e){e.stopPropagation();if(v.muted){mutouNaMao=false;comSom(true)}else{mutouNaMao=true;mudo()}});
+  var moveu=false;
+  function primeiroToque(e){
+    if(!v.muted||mutouNaMao||!heroVisivel)return;
+    if(e.type==='touchend'&&moveu)return;
+    var t=e.target;if(t&&t.closest&&(t.closest('#snd')||t.closest('.buy')))return;
+    comSom(true);
+  }
+  document.addEventListener('touchstart',function(){moveu=false},{passive:true});
+  document.addEventListener('touchmove',function(){moveu=true},{passive:true});
+  ['click','touchend','keydown'].forEach(function(ev){document.addEventListener(ev,primeiroToque,{passive:true})});
+  // pausa quando o video sai da tela ou a aba fica em segundo plano (nao deixa audio tocando sozinho)
+  new IntersectionObserver(function(es){heroVisivel=es[0].intersectionRatio>=.25;if(heroVisivel&&!document.hidden){var p=v.play();if(p&&p.catch)p.catch(function(){})}else{v.pause()}},{threshold:[0,.25,.5]}).observe(hero);
+  document.addEventListener('visibilitychange',function(){if(document.hidden){v.pause()}else if(heroVisivel){var p=v.play();if(p&&p.catch)p.catch(function(){})}});
+  comSom(false);
 </script>
 </body>
 </html>
