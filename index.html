@@ -215,8 +215,14 @@ fbq('track','ViewContent',{content_name:'Projetor CineLuz Pro',content_ids:['371
 <noscript><img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=1125482573342608&ev=PageView&noscript=1"></noscript>
 
 <script>
-  var CHECKOUT='https://cineluzpro.lojavirtualnuvem.com.br/comprar/?add_to_cart=3577634432';
-  document.querySelectorAll('.buy').forEach(function(a){a.href=CHECKOUT;a.addEventListener('click',function(){try{fbq('track','InitiateCheckout',{value:249.90,currency:'BRL',content_ids:['371838597'],content_type:'product'})}catch(e){}})});
+  // Nuvemshop so adiciona ao carrinho por POST (link GET abre carrinho vazio)
+  var CART='https://cineluzpro.lojavirtualnuvem.com.br/comprar/';
+  var PRODUTO='https://cineluzpro.lojavirtualnuvem.com.br/produtos/projetor-cineluz-pro-mini-projetor-portatil-wi-fi-e-bluetooth-ate-120-axrt8/';
+  var f=document.createElement('form');f.method='POST';f.action=CART;f.style.display='none';
+  [['add_to_cart','371838597'],['quantity','1']].forEach(function(p){var i=document.createElement('input');i.type='hidden';i.name=p[0];i.value=p[1];f.appendChild(i)});
+  document.body.appendChild(f);
+  var indo=false;
+  document.querySelectorAll('.buy').forEach(function(a){a.href=PRODUTO;a.addEventListener('click',function(e){e.preventDefault();if(indo)return;indo=true;try{fbq('track','AddToCart',{value:249.90,currency:'BRL',content_ids:['371838597'],content_type:'product'})}catch(err){}setTimeout(function(){f.submit()},200);setTimeout(function(){indo=false},4000)})});
   var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('on');io.unobserve(e.target)}})},{threshold:.1});
   document.querySelectorAll('.reveal').forEach(function(el){io.observe(el)});
   var v=document.getElementById('v'),snd=document.getElementById('snd');
